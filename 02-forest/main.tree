@@ -1,0 +1,177 @@
+ui8[20000] s_buffer;
+ui8 s_last_num_length = 0;
+
+ui64 GetNumFromString(ref<ui8> input) {
+	ui8[3] numBuffer = {0, 0, 0};
+	ui8 numLength = 0;
+	loop i, 0..3 {
+		ui8 byte = input[i];
+		if (byte >= '0') & (byte <= '9') {
+			numBuffer[numLength] = (byte - '0');
+			numLength += 1;
+		} else if (byte == ' ') | (byte == '\n') {
+			break;
+		}
+	}
+	ui8 multiplication = 1;
+	ui64 returnVal = 0;
+	loop i, 1..numLength + 1 {
+		ui8 j = numLength - i;
+		returnVal += (numBuffer[j] * multiplication);
+		multiplication *= 10;
+	}
+	s_last_num_length = numLength;
+	return returnVal;
+}
+
+ui64[20] s_numbers_in_row;
+ui64 s_numbers_in_row_count;
+
+void PrintSafetyCode(ui64 code) {
+	if (code == 0) {
+		stdout.write("SAFE\n");
+	} else if code == 1 {
+		stdout.write("[IsSafe]: Fails equal check\n");
+	} else if code == 2 {
+		stdout.write("[IsSafe]: Decreasing when we were increasing\n");
+	} else if code == 3 {
+		stdout.write("[IsSafe]: Increasing when we were decreasing\n");
+	} else {
+		if (code & 1048576) == 1048576 {
+			ui64 calc = code - 1048576;
+			stdout.write("[IsSafe]: Decreasing step too high. Is ");
+			stdout.writeln(calc);
+		} else if (code & 2097152) == 2097152 {
+			ui64 calc = code - 2097152;
+			stdout.write("[IsSafe]: Increasing step too high. Is ");
+			stdout.writeln(calc);
+		} else {
+			stdout.write("[IsSafe]: Unknown safety code ");
+			stdout.writeln(code);
+		}
+	}
+}
+
+ui64 GetSafety(ui8 indexToSkip) {
+	ui64 lastNum = s_numbers_in_row[0];
+	ui8 status = 0; // 0 unknown, 1 increasing, 2 decreasing
+
+	ui64 begin = 1;
+	ui64 end = s_numbers_in_row_count;
+
+	if indexToSkip == 0 {
+		lastNum = s_numbers_in_row[1];
+		begin = 2;
+	}
+
+	loop i, begin..end {
+		if i == indexToSkip {
+			skip;
+		}
+		ui64 toCheck = s_numbers_in_row[i];
+		if toCheck == lastNum {
+			return 1;
+		} else if toCheck < lastNum {
+			if status == 1 {
+				return 2;
+			} else {
+				status = 2;
+				ui64 calc = lastNum - toCheck;
+				if (calc < 1) | (calc > 3) {
+					return 1048576 | calc;
+				}
+			}
+		} else if toCheck > lastNum {
+			if status == 2 {
+				return 3;
+			} else {
+				status = 1;
+				ui64 calc = toCheck - lastNum;
+				if (calc < 1) | (calc > 3) {
+					return 2097152 | calc;
+				}
+			}
+		}
+		lastNum = toCheck;
+	}
+	return 0;
+}
+
+void Part1(ui64 size) {
+	ui64 reportsSafe = 0;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if (byte >= '0') & (byte <= '9') {
+			ref<ui8> c = (\s_buffer) + i;
+			ui64 num = GetNumFromString(c);
+			stdout.write(num);
+			stdout.write(" ");
+			i += (s_last_num_length - 1);
+			s_numbers_in_row[s_numbers_in_row_count] = num;
+			s_numbers_in_row_count += 1;
+		} else if (byte == '\n') {
+			ui64 safety = GetSafety(-1);
+			PrintSafetyCode(safety);
+			if safety == 0 {
+				reportsSafe += 1;
+			}
+			s_numbers_in_row_count = 0;
+		}
+	}
+	stdout.write("Number of reports safe p1: ");
+	stdout.writeln(reportsSafe);
+}
+
+bool BruteforcePart2() {
+	loop i, 0..s_numbers_in_row_count {
+		ui64 safety = GetSafety(i);
+		if safety == 0 {
+			return true;
+		}
+	}
+	return false;
+}
+
+void Part2(ui64 size) {
+	ui64 reportsSafe = 0;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if (byte >= '0') & (byte <= '9') {
+			ref<ui8> c = (\s_buffer) + i;
+			ui64 num = GetNumFromString(c);
+			i += (s_last_num_length - 1);
+			s_numbers_in_row[s_numbers_in_row_count] = num;
+			s_numbers_in_row_count += 1;
+		} else if (byte == '\n') {
+			ui64 safety = GetSafety(-1);
+			if safety == 0 {
+				reportsSafe += 1;
+			} else {
+				bool safe = BruteforcePart2();
+				if safe {
+					reportsSafe += 1;
+				}
+			}
+
+			s_numbers_in_row_count = 0;
+		}
+	}
+	stdout.write("Number of reports safe p2: ");
+	stdout.writeln(reportsSafe);
+}
+
+ui8 main(array<ref<ui8> > argv) {
+	i32 fd = SYS_OPEN(argv[1], 0, 0);
+	if (fd < 0) {
+		stdout.write("Could not open file\n");
+		return -1;
+	}
+	ui64 size = SYS_READ(fd, \s_buffer, 20000);
+	if (size == 0) {
+		stdout.write("Could not read from file\n");
+		return -1;
+	}
+	Part1(size);
+	Part2(size);
+	return 0;
+}
