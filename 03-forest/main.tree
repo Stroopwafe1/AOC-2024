@@ -1,0 +1,144 @@
+ui8[20000] s_buffer;
+
+bool StrEquals(ref<ui8> s1, ref<ui8> s2, ui64 len) {
+	ui64 length = len;
+	loop i, 0..length {
+		if s1[i] != s2[i] {
+			return false;
+		}
+	}
+	return true;
+}
+
+ui64[2000] s_num1;
+ui64[2000] s_num2;
+ui64 s_num_count = 0;
+
+ui8 GetMul(ui64 size, ui64 offset) {
+	ui8 returnVal = 0;
+	loop i, offset..size {
+		ui8 byte = s_buffer[i];
+		bool isMul = StrEquals((\s_buffer) + i, "mul(", 4);
+		if !isMul {
+			return 0;
+		}
+		i += 4;
+		ui8 numByte = s_buffer[i];
+		if (numByte < '0') | (numByte > '9') {
+			return 0;
+		}
+		ui64 num = find_ui64_in_string((\s_buffer) + i);
+		ui8 numLength = 0;
+		s_num1[s_num_count] = num;
+		loop j, 0..20 {
+			numByte = s_buffer[i + j];
+			if (numByte >= '0') & (numByte <= '9') {
+				numLength += 1;
+			} else {
+				break;
+			}
+		}
+		i += numLength;
+		byte = s_buffer[i];
+		if byte != ',' {
+			return 0;
+		}
+		i += 1;
+		numByte = s_buffer[i];
+		if (numByte < '0') | (numByte > '9') {
+			return 0;
+		}
+		num = find_ui64_in_string((\s_buffer) + i);
+		numLength = 0;
+		loop j, 0..20 {
+			numByte = s_buffer[i + j];
+			if (numByte >= '0') & (numByte <= '9') {
+				numLength += 1;
+			} else {
+				break;
+			}
+		}
+		i += numLength;
+		byte = s_buffer[i];
+		if byte != ')' {
+			return 0;
+		}
+		s_num2[s_num_count] = num;
+		s_num_count += 1;
+		returnVal = i - offset;
+		break;
+	}
+	return returnVal;
+}
+
+void Part1(ui64 size) {
+	ui64 sum = 0;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte == 'm' {
+			ui8 offset = GetMul(size, i);
+			if offset == 0 {
+				skip;
+			}
+			i += offset;
+		}
+	}
+	loop i, 0..s_num_count {
+		ui64 num1 = s_num1[i];
+		ui64 num2 = s_num2[i];
+		sum += (num1 * num2);
+	}
+	stdout.write("Sum of mults part 1: ");
+	stdout.writeln(sum);
+}
+
+void Part2(ui64 size) {
+	ui64 sum = 0;
+	ui64 iter = 0;
+	bool enabled = true;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte == 'd' {
+			bool matchesDont = StrEquals((\s_buffer) + i, "don't()", 7);
+			if matchesDont {
+				enabled = false;
+				skip;
+			}
+			bool matchesDo = StrEquals((\s_buffer) + i, "do()", 4);
+			if matchesDo {
+				enabled = true;
+				skip;
+			}
+		} else if byte == 'm' {
+			ui8 offset = GetMul(size, i);
+			if offset == 0 {
+				skip;
+			}
+			ui64 num1 = s_num1[iter];
+			ui64 num2 = s_num2[iter];
+			iter += 1;
+			if enabled {
+				sum += (num1 * num2);
+			}
+			i += offset;
+		}
+	}
+	stdout.write("Sum of mults part 2: ");
+	stdout.writeln(sum);
+}
+
+ui8 main(array<ref<ui8> > argv) {
+	i32 fd = SYS_OPEN(argv[1], 0, 0);
+	if (fd < 0) {
+		stdout.writeln("Could not open file");
+		return -1;
+	}
+	ui64 size = SYS_READ(fd, \s_buffer, 20000);
+	if (size == 0) {
+		stdout.writeln("Could not read from file");
+		return -1;
+	}
+	Part1(size);
+	Part2(size);
+	return 0;
+}
