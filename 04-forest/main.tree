@@ -1,0 +1,193 @@
+ui8[20000] s_buffer;
+
+ui8 GetChar(ui64 index, ui64 size) {
+	if index < 0 {
+		return 0;
+	} else if index > size {
+		return 0;
+	}
+	return s_buffer[index];
+}
+
+bool IsXMASBackwards(ui64 index, ui64 size) {
+	bool m = GetChar(index - 1, size) == 'M';
+	bool a = GetChar(index - 2, size) == 'A';
+	bool s = GetChar(index - 3, size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASForwards(ui64 index, ui64 size) {
+	bool m = GetChar(index + 1, size) == 'M';
+	bool a = GetChar(index + 2, size) == 'A';
+	bool s = GetChar(index + 3, size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASDown(ui64 index, ui64 length, ui64 size) {
+	bool m = GetChar((index + (1 * length)) + 1, size) == 'M';
+	bool a = GetChar((index + (2 * length)) + 2, size) == 'A';
+	bool s = GetChar((index + (3 * length)) + 3, size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASUp(ui64 index, ui64 length, ui64 size) {
+	bool m = GetChar((index - (1 * length)) - 1, size) == 'M';
+	bool a = GetChar((index - (2 * length)) - 2, size) == 'A';
+	bool s = GetChar((index - (3 * length)) - 3, size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASNW(ui64 index, ui64 length, ui64 size) {
+	bool m = GetChar((index - (1 * length)) - 2, size) == 'M';
+	bool a = GetChar((index - (2 * length)) - 4, size) == 'A';
+	bool s = GetChar((index - (3 * length)) - 6, size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASNE(ui64 index, ui64 length, ui64 size) {
+	bool m = GetChar(index - (1 * length), size) == 'M';
+	bool a = GetChar(index - (2 * length), size) == 'A';
+	bool s = GetChar(index - (3 * length), size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASSE(ui64 index, ui64 length, ui64 size) {
+	bool m = GetChar((index + (1 * length)) + 2, size) == 'M';
+	bool a = GetChar((index + (2 * length)) + 4, size) == 'A';
+	bool s = GetChar((index + (3 * length)) + 6, size) == 'S';
+	return m & (a & s);
+}
+
+bool IsXMASSW(ui64 index, ui64 length, ui64 size) {
+	bool m = GetChar(index + (1 * length), size) == 'M';
+	bool a = GetChar(index + (2 * length), size) == 'A';
+	bool s = GetChar(index + (3 * length), size) == 'S';
+	return m & (a & s);
+}
+
+void Part1(ui64 size) {
+	ui64 sum = 0;
+	ui64 length = 0;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte == '\n' {
+			length = i;
+			break;
+		}
+	}
+	stdout.writeln(length);
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte != 'X' {
+			skip;
+		}
+		bool backward = IsXMASBackwards(i, size);
+		bool forward = IsXMASForwards(i, size);
+		bool down = IsXMASDown(i, length, size);
+		bool up = IsXMASUp(i, length, size);
+		bool nw = IsXMASNW(i, length, size);
+		bool ne = IsXMASNE(i, length, size);
+		bool se = IsXMASSE(i, length, size);
+		bool sw = IsXMASSW(i, length, size);
+		if backward {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas backwards\n");
+		}
+		if forward {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas forwards\n");
+		}
+		if down {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas down\n");
+		}
+		if up {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas up\n");
+		}
+		if nw {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas NW\n");
+		}
+		if ne {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas NE\n");
+		}
+		if se {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas SE\n");
+		}
+		if sw {
+			sum += 1;
+			stdout.write(i);
+			stdout.write(" is xmas SW\n");
+		}
+	}
+	stdout.write("Part 1: ");
+	stdout.writeln(sum);
+}
+
+void Part2(ui64 size) {
+	ui64 sum = 0;
+	ui64 length = 0;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte == '\n' {
+			length = i;
+			break;
+		}
+	}
+
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte != 'A' {
+			skip;
+		}
+		ui8 topLeft = GetChar((i - (1 * length)) - 2, size);
+		ui8 topRight = GetChar(i - (1 * length), size);
+		ui8 bottomLeft = GetChar(i + (1 * length), size);
+		ui8 bottomRight = GetChar((i + (1 * length)) + 2, size);
+		bool firstSide = false;
+		bool secondSide = false;
+		if (topLeft == 'M') & (bottomRight == 'S') {
+			firstSide = true;
+		} else if (topLeft == 'S') & (bottomRight == 'M') {
+			firstSide = true;
+		}
+		if (topRight == 'M') & (bottomLeft == 'S') {
+			secondSide = true;
+		} else if (topRight == 'S') & (bottomLeft == 'M') {
+			secondSide = true;
+		}
+
+		if firstSide & secondSide {
+			sum += 1;
+		}
+	}
+
+	stdout.write("Part 2: ");
+	stdout.writeln(sum);
+}
+
+ui8 main(array<ref<ui8> > argv) {
+	i32 fd = SYS_OPEN(argv[1], 0, 0);
+	if (fd < 0) {
+		stdout.writeln("Could not open file");
+		return -1;
+	}
+	ui64 size = SYS_READ(fd, \s_buffer, 20000);
+	if (size == 0) {
+		stdout.writeln("Could not read from file");
+		return -1;
+	}
+	Part1(size);
+	Part2(size);
+	return 0;
+}
