@@ -1,0 +1,131 @@
+ui8[20000] s_buffer;
+i64 s_height = 0;
+i64 s_width = 0;
+ui64[2000] s_xs;
+ui64[2000] s_ys;
+ui64 s_pos_count = 0;
+
+ui64 s_start_x = 0;
+ui64 s_start_y = 0;
+
+ui64[10000] s_visited_x;
+ui64[10000] s_visited_y;
+ui64 s_visited_count = 0;
+
+void Setup(ui64 size) {
+	ui64 y = 0;
+	loop i, 0..size {
+		ui8 byte = s_buffer[i];
+		if byte == '\n' {
+			y += 1;
+			s_height += 1;
+			if s_width == 0 {
+				s_width = i;
+			}
+		} else if byte == '#' {
+			s_ys[s_pos_count] = y;
+			if s_width == 0 {
+				s_xs[s_pos_count] = i;
+			} else {
+				s_xs[s_pos_count] = (i % (s_width + 1));
+			}
+			s_pos_count += 1;
+		} else if byte == '^' {
+			s_start_x = (i % (s_width + 1));
+			s_start_y = y;
+		}
+	}
+}
+
+void Part1() {
+	i64 x = s_start_x;
+	i64 y = s_start_y;
+	i8 x_dir = 0;
+	i8 y_dir = -1;
+	s_visited_x[s_visited_count] = x;
+	s_visited_y[s_visited_count] = y;
+	s_visited_count += 1;
+	loop {
+		i64 x_next = x + x_dir;
+		i64 y_next = y + y_dir;
+		bool turned = false;
+		if (x_next < 0) | (x_next >= s_width) {
+			stdout.write("Player escaped x\n");
+			break;
+		} else if (y_next < 0) | (y_next >= s_height) {
+			stdout.write("Player escaped y\n");
+			break;
+		}
+		loop i, 0..s_pos_count {
+			ui64 x_check = s_xs[i];
+			ui64 y_check = s_ys[i];
+			if (x_check == x_next) & (y_check == y_next) {
+				if y_dir == -1 {
+					y_dir = 0;
+					x_dir = 1;
+				} else if x_dir == 1 {
+					x_dir = 0;
+					y_dir = 1;
+				} else if y_dir = 1 {
+					y_dir = 0;
+					x_dir = -1;
+				} else {
+					x_dir = 0;
+					y_dir = -1;
+				}
+				turned = true;
+				stdout.write("Turned at ");
+				stdout.write(x_check);
+				stdout.write(", ");
+				stdout.writeln(y_check);
+				break;
+			}
+		}
+		if turned {
+			skip;
+		}
+		x = x_next;
+		y = y_next;
+		sum += 1;
+		bool alreadyAdded = false;
+		loop i, 0..s_visited_count {
+			ui64 x_check = s_visited_x[i];
+			ui64 y_check = s_visited_y[i];
+			if (x_check == x) & (y_check == y) {
+				alreadyAdded = true;
+				break;
+			}
+		}
+		if !alreadyAdded {
+			s_visited_x[s_visited_count] = x;
+			s_visited_y[s_visited_count] = y;
+			s_visited_count += 1;
+		}
+	}
+	stdout.write("Part 1: ");
+	stdout.writeln(s_visited_count);
+}
+
+void Part2() {
+	ui64 sum = 0;
+
+	stdout.write("Part 2: ");
+	stdout.writeln(sum);
+}
+
+ui8 main(array<ref<ui8> > argv) {
+	i64 fd = SYS_OPEN(argv[1], 0, 0);
+	if (fd < 0) {
+		stdout.writeln("Could not open file");
+		return -1;
+	}
+	ui64 size = SYS_READ(fd, \s_buffer, 20000);
+	if (size == 0) {
+		stdout.writeln("Could not read from file");
+		return -1;
+	}
+	Setup(size);
+	Part1();
+	//Part2(size);
+	return 0;
+}
