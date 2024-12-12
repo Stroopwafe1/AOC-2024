@@ -23,6 +23,15 @@ const getCell = (x: number, y: number): string => {
 let sum = 0;
 let sumP2 = 0;
 const visited: Array<Pos> = [];
+
+const expandLine = (lines: Array<{positions: Array<Pos>, direction: number}>, direction: number, pos: Pos) => {
+	const found = lines.find(l => l.direction === direction && l.positions.some(p => direction === horizontal ? p.y === pos.y : p.x === pos.x));
+	if (found)
+		found.positions.push(pos);
+	else
+		lines.push({positions: [pos], direction});
+}
+
 for (let y = 0; y < input.length; y++) {
 	for (let x = 0; x < input[y].length; x++) {
 		if (visited.includes(`X${x}Y${y}`)) continue;
@@ -43,110 +52,50 @@ for (let y = 0; y < input.length; y++) {
 			const right = getCell(pos.x + 1, pos.y) === cur;
 			if (!up) {
 				perimeter++;
-				const found = lines.find(l => l.direction === horizontal && l.positions.some(p => p.y === pos.y - 0.25));
-				if (found)
-					found.positions.push({x: pos.x, y: pos.y - 0.25});
-				else {
-					lines.push({direction: horizontal, positions: [{x: pos.x, y: pos.y - 0.25}], debug: 'not up'});
-				}
+				expandLine(lines, horizontal, {x: pos.x, y: pos.y - 0.25});
 			} else {
 				stack.push({x: pos.x, y: pos.y - 1});
 				if (!left) {
-					const found = lines.find(l => l.direction === vertical && l.positions.some(p => p.x === pos.x - 0.25));
-					if (found)
-						found.positions.push({x: pos.x - 0.25, y: pos.y});
-					else {
-						lines.push({direction: vertical, positions: [{x: pos.x - 0.25, y: pos.y}], debug: 'up not left'});
-					}
+					expandLine(lines, vertical, {x: pos.x - 0.25, y: pos.y});
 				}
 				if (!right) {
-					const found = lines.find(l => l.direction === vertical && l.positions.some(p => p.x === pos.x + 0.25));
-					if (found)
-						found.positions.push({x: pos.x + 0.25, y: pos.y});
-					else {
-						lines.push({direction: vertical, positions: [{x: pos.x + 0.25, y: pos.y}], debug: 'up not right'});
-					}
+					expandLine(lines, vertical, {x: pos.x + 0.25, y: pos.y});
 				}
 			}
 			if (!left) {
 				perimeter++;
-				const found = lines.find(l => l.direction === vertical && l.positions.some(p => p.x === pos.x - 0.25));
-				if (found)
-					found.positions.push({x: pos.x - 0.25, y: pos.y});
-				else {
-					lines.push({direction: vertical, positions: [{x: pos.x - 0.25, y: pos.y}], debug: 'not left'});
-				}
+				expandLine(lines, vertical, {x: pos.x - 0.25, y: pos.y});
 			} else {
 				stack.push({x: pos.x - 1, y: pos.y});
 				if (!up) {
-					const found = lines.find(l => l.direction === horizontal && l.positions.some(p => p.y === pos.y - 0.25));
-					if (found)
-						found.positions.push({x: pos.x, y: pos.y - 0.25});
-					else {
-						lines.push({direction: horizontal, positions: [{x: pos.x, y: pos.y - 0.25}], debug: 'left not up'});
-					}
+					expandLine(lines, horizontal, {x: pos.x, y: pos.y - 0.25});
 				}
 				if (!down) {
-					const found = lines.find(l => l.direction === horizontal && l.positions.some(p => p.y === pos.y + 0.25));
-					if (found)
-						found.positions.push({x: pos.x, y: pos.y + 0.25});
-					else {
-						lines.push({direction: horizontal, positions: [{x: pos.x, y: pos.y + 0.25}], debug: 'left not down'});
-					}
+					expandLine(lines, horizontal, {x: pos.x, y: pos.y + 0.25});
 				}
 			}
 			if (!down) {
 				perimeter++;
-				const found = lines.find(l => l.direction === horizontal && l.positions.some(p => p.y === pos.y + 0.25));
-				if (found)
-					found.positions.push({x: pos.x, y: pos.y + 0.25});
-				else {
-					lines.push({direction: horizontal, positions: [{x: pos.x, y: pos.y + 0.25}], debug: 'not down'});
-				}
+				expandLine(lines, horizontal, {x: pos.x, y: pos.y + 0.25});
 			} else {
 				stack.push({x: pos.x, y: pos.y + 1});
 				if (!left) {
-					const found = lines.find(l => l.direction === vertical && l.positions.some(p => p.x === pos.x - 0.25));
-					if (found)
-						found.positions.push({x: pos.x - 0.25, y: pos.y});
-					else {
-						lines.push({direction: vertical, positions: [{x: pos.x - 0.25, y: pos.y}], debug: 'down not left'});
-					}
+					expandLine(lines, vertical, {x: pos.x - 0.25, y: pos.y});
 				}
 				if (!right) {
-					const found = lines.find(l => l.direction === vertical && l.positions.some(p => p.x === pos.x + 0.25));
-					if (found)
-						found.positions.push({x: pos.x + 0.25, y: pos.y});
-					else {
-						lines.push({direction: vertical, positions: [{x: pos.x + 0.25, y: pos.y}], debug: 'down not right'});
-					}
+					expandLine(lines, vertical, {x: pos.x + 0.25, y: pos.y});
 				}
 			}
 			if (!right) {
 				perimeter++;
-				const found = lines.find(l => l.direction === vertical && l.positions.some(p => p.x === pos.x + 0.25));
-				if (found)
-					found.positions.push({x: pos.x + 0.25, y: pos.y});
-				else {
-					lines.push({direction: vertical, positions: [{x: pos.x + 0.25, y: pos.y}], debug: 'not right'});
-				}
+				expandLine(lines, vertical, {x: pos.x + 0.25, y: pos.y});
 			} else {
 				stack.push({x: pos.x + 1, y: pos.y});
 				if (!up) {
-					const found = lines.find(l => l.direction === horizontal && l.positions.some(p => p.y === pos.y - 0.25));
-					if (found)
-						found.positions.push({x: pos.x, y: pos.y - 0.25});
-					else {
-						lines.push({direction: horizontal, positions: [{x: pos.x, y: pos.y - 0.25}], debug: 'right not up'});
-					}
+					expandLine(lines, horizontal, {x: pos.x, y: pos.y - 0.25});
 				}
 				if (!down) {
-					const found = lines.find(l => l.direction === horizontal && l.positions.some(p => p.y === pos.y + 0.25));
-					if (found)
-						found.positions.push({x: pos.x, y: pos.y + 0.25});
-					else {
-						lines.push({direction: horizontal, positions: [{x: pos.x, y: pos.y + 0.25}], debug: 'right not down'});
-					}
+					expandLine(lines, horizontal, {x: pos.x, y: pos.y + 0.25});
 				}
 			}
 		}
