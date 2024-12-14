@@ -44,13 +44,13 @@ const writePPM = (step: number) => {
 	const outputFile = Bun.file(`${step}.ppm`);
 	const data = new Uint8Array(width * height * 3);
 	const writer = outputFile.writer();
-	writer.write(`P6 ${width} ${height} 255`);
+	writer.write(`P6\n${width} ${height} 255\n`);
 
 	robots.forEach(robot => {
-		const index = (robot.pos.y * width + (robot.pos.x)) * 3;
+		const index = (robot.pos.y * width + robot.pos.x) * 3;
 		data[index] = 0;
-		data[index + 1] = 0;
-		data[index + 2] = 255;
+		data[index + 1] = 255;
+		data[index + 2] = 0;
 	});
 
 	writer.write(data);
