@@ -7,14 +7,16 @@ const content = (await file.text()).trim();
 const mapStr = content.split('\n\n')[0];
 const moveStr = content.split('\n\n')[1];
 
-const width = mapStr.split('\n')[0].length;
-const height = mapStr.split('\n').length;
+let width = mapStr.split('\n')[0].length;
+let height = mapStr.split('\n').length;
 
 const enum TileType {
 	NONE = -1,
 	EMPTY = 0,
 	WALL = 1,
 	BOX = 2,
+	BOXL,
+	BOXR,
 }
 type Vec2 = {
 	x: number,
@@ -48,6 +50,37 @@ const parseMap = () => {
 	});
 }
 
+const parseMap2 = () => {
+	let y = 0;
+	let x = 0;
+	Array.from(mapStr).forEach(c => {
+		let resetX = false;
+		if (c === '#') {
+			map.push(TileType.WALL);
+			map.push(TileType.WALL);
+		} else if (c === '.') {
+			map.push(TileType.EMPTY);
+			map.push(TileType.EMPTY);
+		} else if (c === 'O') {
+			map.push(TileType.BOXL);
+			map.push(TileType.BOXR);
+		} else if (c === '@') {
+			map.push(TileType.EMPTY);
+			robotPos.x = x;
+			robotPos.y = y;
+			map.push(TileType.EMPTY);
+		} else if (c === '\n') {
+			width = x;
+			x = 0;
+			y++;
+			resetX = true;
+		}
+		if (!resetX)
+			x+=2;
+	});
+	height = y + 1;
+}
+
 const getTile = (x: number, y: number) => {
 	if (x < 0 || x >= width) return TileType.NONE;
 	if (y < 0 || y >= height) return TileType.NONE;
@@ -72,6 +105,10 @@ const displayMap = () => {
 					str += '@';
 				else
 					str += '.';
+			} else if (tile === TileType.BOXL) {
+				str += '[';
+			} else if (tile === TileType.BOXR) {
+				str += ']';
 			}
 		}
 		str += '\n';
@@ -84,7 +121,7 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 		const tile = getTile(robotPos.x, robotPos.y - 1);
 		let canMove = true;
 		if (tile === TileType.NONE) {
-			console.error('Moved outside of area', robotPos);
+			console.error('Moved outside of area up', robotPos);
 			process.exit(1);
 		} else if (tile === TileType.WALL) {
 			// cannot move
@@ -108,6 +145,72 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 			} else {
 				canMove = false;
 			}
+		} else if (tile === TileType.BOXL) {
+			const stack: Array<Vec2> = [{x: robotPos.x, y: robotPos.y - 2}, {x: robotPos.x + 1, y: robotPos.y - 2}];
+			const connected: Array<Vec2> = [{x: robotPos.x, y: robotPos.y - 1}, {x: robotPos.x + 1, y: robotPos.y - 1}];
+			while (stack.length > 0) {
+				const tilePos = stack.pop();
+				const tile = getTile(tilePos.x, tilePos.y);
+				if (tile === TileType.WALL) {
+					canMove = false;
+					break;
+				} else if (tile === TileType.BOXL) {
+					stack.push({x: tilePos.x, y: tilePos.y - 1});
+					stack.push({x: tilePos.x + 1, y: tilePos.y - 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x + 1, y: tilePos.y});
+				} else if (tile === TileType.BOXR) {
+					stack.push({x: tilePos.x, y: tilePos.y - 1});
+					stack.push({x: tilePos.x - 1, y: tilePos.y - 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x - 1, y: tilePos.y});
+				}
+			}
+			if (canMove) {
+				connected.filter((val, idx) => {
+					const value = JSON.stringify(val);
+					return idx === connected.findIndex(c => JSON.stringify(c) === value);
+				})
+				.toSorted((a, b) => a.y - b.y)
+				.forEach(b => {
+					const tile = getTile(b.x, b.y);
+					setTile(b.x, b.y - 1, tile);
+					setTile(b.x, b.y, TileType.EMPTY);
+				});
+			}
+		} else if (tile === TileType.BOXR) {
+			const stack: Array<Vec2> = [{x: robotPos.x, y: robotPos.y - 2}, {x: robotPos.x - 1, y: robotPos.y - 2}];
+			const connected: Array<Vec2> = [{x: robotPos.x, y: robotPos.y - 1}, {x: robotPos.x - 1, y: robotPos.y - 1}];
+			while (stack.length > 0) {
+				const tilePos = stack.pop();
+				const tile = getTile(tilePos.x, tilePos.y);
+				if (tile === TileType.WALL) {
+					canMove = false;
+					break;
+				} else if (tile === TileType.BOXL) {
+					stack.push({x: tilePos.x, y: tilePos.y - 1});
+					stack.push({x: tilePos.x + 1, y: tilePos.y - 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x + 1, y: tilePos.y});
+				} else if (tile === TileType.BOXR) {
+					stack.push({x: tilePos.x, y: tilePos.y - 1});
+					stack.push({x: tilePos.x - 1, y: tilePos.y - 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x - 1, y: tilePos.y});
+				}
+			}
+			if (canMove) {
+				connected.filter((val, idx) => {
+					const value = JSON.stringify(val);
+					return idx === connected.findIndex(c => JSON.stringify(c) === value);
+				})
+				.toSorted((a, b) => a.y - b.y)
+				.forEach(b => {
+					const tile = getTile(b.x, b.y);
+					setTile(b.x, b.y - 1, tile);
+					setTile(b.x, b.y, TileType.EMPTY);
+				});
+			}
 		}
 		if (canMove) {
 			robotPos.y -= 1;
@@ -116,7 +219,7 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 		const tile = getTile(robotPos.x, robotPos.y + 1);
 		let canMove = true;
 		if (tile === TileType.NONE) {
-			console.error('Moved outside of area', robotPos);
+			console.error('Moved outside of area down', robotPos);
 			process.exit(1);
 		} else if (tile === TileType.WALL) {
 			// cannot move
@@ -140,6 +243,72 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 			} else {
 				canMove = false;
 			}
+		} else if (tile === TileType.BOXL) {
+			const stack: Array<Vec2> = [{x: robotPos.x, y: robotPos.y + 2}, {x: robotPos.x + 1, y: robotPos.y + 2}];
+			const connected: Array<Vec2> = [{x: robotPos.x, y: robotPos.y + 1}, {x: robotPos.x + 1, y: robotPos.y + 1}];
+			while (stack.length > 0) {
+				const tilePos = stack.pop();
+				const tile = getTile(tilePos.x, tilePos.y);
+				if (tile === TileType.WALL) {
+					canMove = false;
+					break;
+				} else if (tile === TileType.BOXL) {
+					stack.push({x: tilePos.x, y: tilePos.y + 1});
+					stack.push({x: tilePos.x + 1, y: tilePos.y + 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x + 1, y: tilePos.y});
+				} else if (tile === TileType.BOXR) {
+					stack.push({x: tilePos.x, y: tilePos.y + 1});
+					stack.push({x: tilePos.x - 1, y: tilePos.y + 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x - 1, y: tilePos.y});
+				}
+			}
+			if (canMove) {
+				connected.filter((val, idx) => {
+					const value = JSON.stringify(val);
+					return idx === connected.findIndex(c => JSON.stringify(c) === value);
+				})
+				.toSorted((a, b) => b.y - a.y)
+				.forEach(b => {
+					const tile = getTile(b.x, b.y);
+					setTile(b.x, b.y + 1, tile);
+					setTile(b.x, b.y, TileType.EMPTY);
+				});
+			}
+		} else if (tile === TileType.BOXR) {
+			const stack: Array<Vec2> = [{x: robotPos.x, y: robotPos.y + 2}, {x: robotPos.x - 1, y: robotPos.y + 2}];
+			const connected: Array<Vec2> = [{x: robotPos.x, y: robotPos.y + 1}, {x: robotPos.x - 1, y: robotPos.y + 1}];
+			while (stack.length > 0) {
+				const tilePos = stack.pop();
+				const tile = getTile(tilePos.x, tilePos.y);
+				if (tile === TileType.WALL) {
+					canMove = false;
+					break;
+				} else if (tile === TileType.BOXL) {
+					stack.push({x: tilePos.x, y: tilePos.y + 1});
+					stack.push({x: tilePos.x + 1, y: tilePos.y + 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x + 1, y: tilePos.y});
+				} else if (tile === TileType.BOXR) {
+					stack.push({x: tilePos.x, y: tilePos.y + 1});
+					stack.push({x: tilePos.x - 1, y: tilePos.y + 1});
+					connected.push({x: tilePos.x, y: tilePos.y});
+					connected.push({x: tilePos.x - 1, y: tilePos.y});
+				}
+			}
+			if (canMove) {
+				connected.filter((val, idx) => {
+					const value = JSON.stringify(val);
+					return idx === connected.findIndex(c => JSON.stringify(c) === value);
+				})
+				.toSorted((a, b) => b.y - a.y)
+				.forEach(b => {
+					const tile = getTile(b.x, b.y);
+					setTile(b.x, b.y + 1, tile);
+					setTile(b.x, b.y, TileType.EMPTY);
+				});
+			}
 		}
 		if (canMove) {
 			robotPos.y += 1;
@@ -148,7 +317,7 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 		const tile = getTile(robotPos.x - 1, robotPos.y);
 		let canMove = true;
 		if (tile === TileType.NONE) {
-			console.error('Moved outside of area', robotPos);
+			console.error('Moved outside of area left', robotPos);
 			process.exit(1);
 		} else if (tile === TileType.WALL) {
 			// cannot move
@@ -172,6 +341,26 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 			} else {
 				canMove = false;
 			}
+		} else if (tile === TileType.BOXL || tile === TileType.BOXR) {
+			let emptyX = 0;
+			for (let i = 2; robotPos.x - i >= 0; i++) {
+				const nextTile = getTile(robotPos.x - i, robotPos.y);
+				if (nextTile === TileType.EMPTY) {
+					emptyX = robotPos.x - i;
+					break;
+				} else if (nextTile === TileType.WALL) {
+					emptyX = -1;
+					break;
+				}
+			}
+			if (emptyX > 0) {
+				for (let i = emptyX; i < robotPos.x; i++) {
+					const tile = getTile(i + 1, robotPos.y);
+					setTile(i, robotPos.y, tile);
+				}
+			} else {
+				canMove = false;
+			}
 		}
 		if (canMove) {
 			robotPos.x -= 1;
@@ -180,7 +369,7 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 		const tile = getTile(robotPos.x + 1, robotPos.y);
 		let canMove = true;
 		if (tile === TileType.NONE) {
-			console.error('Moved outside of area', robotPos);
+			console.error('Moved outside of area right', robotPos);
 			process.exit(1);
 		} else if (tile === TileType.WALL) {
 			// cannot move
@@ -204,6 +393,26 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 			} else {
 				canMove = false;
 			}
+		} else if (tile === TileType.BOXL || tile === TileType.BOXR) {
+			let emptyX = 0;
+			for (let i = 2; robotPos.x + i < width; i++) {
+				const nextTile = getTile(robotPos.x + i, robotPos.y);
+				if (nextTile === TileType.EMPTY) {
+					emptyX = robotPos.x + i;
+					break;
+				} else if (nextTile === TileType.WALL) {
+					emptyX = -1;
+					break;
+				}
+			}
+			if (emptyX > 0) {
+				for (let i = emptyX; i > robotPos.x; i--) {
+					const tile = getTile(i - 1, robotPos.y);
+					setTile(i, robotPos.y, tile);
+				}
+			} else {
+				canMove = false;
+			}
 		}
 		if (canMove) {
 			robotPos.x += 1;
@@ -211,13 +420,14 @@ const doMove = (m: '^'|'<'|'v'|'>') => {
 	}
 }
 
-
 const calculateSum = () => {
 	let sum = 0;
 	for (let y = 0; y < height; y++) {
 		for (let x = 0; x < width; x++) {
 			const tile = getTile(x, y);
 			if (tile === TileType.BOX) {
+				sum += y * 100 + x;
+			} else if (tile === TileType.BOXL) {
 				sum += y * 100 + x;
 			}
 		}
@@ -228,12 +438,15 @@ const calculateSum = () => {
 const simulate = () => {
 	Array.from(moveStr).forEach(c => {
 		doMove(c);
-		displayMap();
+		// console.log(`Move ${c}:`);
+		// displayMap();
 	})
 }
 parseMap();
-displayMap();
 simulate();
-displayMap();
-const sumP1 = calculateSum();
-console.log('Sum part 1: ', sumP1);
+
+console.log('Sum part 1: ', calculateSum());
+map.length = 0;
+parseMap2();
+simulate();
+console.log('Sum part 2: ', calculateSum());
